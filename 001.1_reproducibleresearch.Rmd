@@ -1,0 +1,98 @@
+---
+title: "Reproducible Research using R"
+author: "Ricardo E.E. van der Raaf"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, echo = FALSE}
+#Set chunk options
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
+#Check if packages are installed
+if(!require("readxl", quietly = TRUE)) install.packages("readxl")
+if(!require("dplyr", quietly = TRUE)) install.packages("dplyr")
+if(!require("stringr", quietly = TRUE)) install.packages("stringr")
+if(!require("ggplot", quietly = TRUE)) install.packages("ggplot")
+```
+
+```{r data download and import}
+#Download the data. Mode is set to "Wb" for compatibility with Windows.
+dest <- "C:/Users/rvdra/Documents/RStudio/portfolio/raw_data/CE.LIQ.FLOW.062_Tidydata.xlsx"
+download.file("https://github.com/DataScienceILC/tlsc-dsfb26v-20_workflows/raw/main/data/CE.LIQ.FLOW.062_Tidydata.xlsx", destfile = dest, quiet = TRUE, mode = "wb")
+#Load sheet 1 of the Excel file.
+data <- read_xlsx(dest, sheet = 1)
+```
+
+```{r data inspection, warning = TRUE, echo = FALSE}
+str(data)
+#Irregularities found: the column "compConcentration" is imported as a character class when expected to be of "numeric" class.
+is.character(data$compConcentration)
+#Convert the data into "numeric" class.
+as.numeric(data$compConcentration)
+#Conversion using as.numeric() introduces NA's, because some values were noted using a comma instead of a period as the decimal marker.
+#Replace commas with a period and convert to "numeric" class.
+data$compConcentration <- as.numeric(gsub(",", ".", data$compConcentration))
+#Validate the "numeric" class.
+is.numeric(data$compConcentration)
+```
+
+A log(10) transformation will be performed on the x-axis (compound concentration). Some horizontal jitter will be applied to prevent overplotting.
+
+```{r visualization}
+data |> ggplot(aes(x = log10(compConcentration), 
+                   y = RawData,
+                   color = compName,
+                   shape = expType)) +
+  geom_point() +
+  geom_jitter(width = 0.1) +
+  labs(title = "Dose-response reactions for fertility in C. elegans",
+       x = "Log10 concentration in nM",
+       y = "Number of offspring after 68 hours",
+       shape = "Type",
+       color = "Compound",
+       caption = "Data provided by: J. Louter, Institute for Life Sciences & Chemistry, Hogeschool Utrecht") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+In this experiment, ethanol (/) was used as the positive control, while S-medium (/) was used as the negative control. All values are normalized based on the negative control.
+
+```{r normalization and viz prep}
+#Calculate the negative control mean.
+ctrl_neg_mean <- mean(data$RawData[data$expType=="controlNegative"])
+#Create summarized data and add rows for means and standard deviations.
+sum_data <- group_by(data, compName, compConcentration) |>
+  summarize(by = "compName", mean = mean(RawData), sd = sd(RawData))
+#Calculate the normalized means for the experimental group.
+sum_data <- mutate(sum_data, normalized_mean = mean / ctrl_neg_mean, normalized_sd = sd / ctrl_neg_mean)
+#Rename columns to more aesthethically pleasing names.
+sum_data$compName <- str_replace_all(sum_data$compName, c("2,6-diisopropylnaphthalene" = "2,6-DIPN", "decane" = "Decane", "naphthalene" = "Naphthalene"))
+```
+
+```{r visualization 2}
+#Create position_dodge variable to prevent overlap of data points in the visualization.
+pd <- position_dodge2(0.1)
+#Exclude the negative control from the plot.
+sum_data_plot <- sum_data[sum_data$compName !="S-medium",]
+#Plot the new data.
+ggplot(sum_data_plot, aes(x = log10(compConcentration),
+        y = normalized_mean,
+        shape = compName,
+        colour = compName)) +
+  geom_line(position = pd) +
+  geom_point(position = pd) +
+  geom_errorbar(aes(ymin = normalized_mean - (normalized_sd),
+                    ymax = normalized_mean + (normalized_sd)),
+                    width = 0.2, 
+                    position = pd ) +
+  scale_colour_discrete(name = "Compound") +
+  scale_shape_discrete(name = "Compound") +
+    labs(title = "Dose-response reactions for fertility in C. elegans",
+       subtitle = "Fertility rates are relative to negative control with S-medium",
+       x = "Log10 compound concentration in nM",
+       y = "Relative number of offspring after 68 hours",
+       compName = "Compound",
+       caption = "Data provided by: J. Louter, Institute for Life Sciences & Chemistry, Hogeschool Utrecht",) +
+  theme_minimal()
+
+#ADD: STDEV ERRORBARS
+```
