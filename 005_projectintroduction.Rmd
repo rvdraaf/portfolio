@@ -1,0 +1,3 @@
+#Minion data quality control
+
+Since 2021, the Institute for Life Sciences and Chemistry at the Utrecht University of Applied Sciences has had minION (Oxford Nanopore) sequencers to their disposal. This is a relatively new sequencing technology which utilizes a flow cell, has the advantage to generate vastly longer reads than second-gen sequencing tools (such as Illumina), at the cost of lower accuracy. 

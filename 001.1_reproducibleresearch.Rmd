@@ -5,19 +5,20 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, echo = FALSE}
-#Set chunk options
+```{r setup, echo=FALSE}
+#Set general chunk options
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
-#Check if packages are installed
+#Check if packages are installed and install them if needed
 if(!require("readxl", quietly = TRUE)) install.packages("readxl")
 if(!require("dplyr", quietly = TRUE)) install.packages("dplyr")
 if(!require("stringr", quietly = TRUE)) install.packages("stringr")
 if(!require("ggplot", quietly = TRUE)) install.packages("ggplot")
+if(!require("here", quietly = TRUE)) install.packages("here")
 ```
 
 ```{r data download and import}
 #Download the data. Mode is set to "Wb" for compatibility with Windows.
-dest <- "C:/Users/rvdra/Documents/RStudio/portfolio/raw_data/CE.LIQ.FLOW.062_Tidydata.xlsx"
+dest <- here::here("RawData/CE.LIQ.FLOW.062_Tidydata.xlsx")
 download.file("https://github.com/DataScienceILC/tlsc-dsfb26v-20_workflows/raw/main/data/CE.LIQ.FLOW.062_Tidydata.xlsx", destfile = dest, quiet = TRUE, mode = "wb")
 #Load sheet 1 of the Excel file.
 data <- read_xlsx(dest, sheet = 1)
